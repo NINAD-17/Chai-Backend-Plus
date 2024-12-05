@@ -13,7 +13,7 @@ class ApiError extends Error {
     this.success = false;
     this.errors = errors;
 
-    // To get errors stackwise, in production we remove this code
+    // To get errors stackwise, in production we remove this code (optional code)
     if (stack) {
       this.stack = stack;
     } else {

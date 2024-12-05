@@ -1,4 +1,4 @@
-// -> METHOD 2:
+// -> METHOD 2: with Promise
 const asyncHandler = (requestHandler) => {
     (req, res, next) => {
         Promise
@@ -11,11 +11,11 @@ export { asyncHandler };
 
 
 /*
-// -> METHOD 1
+// -> METHOD 1: with async and await
 // Above code in try catch block
 // Here, fn is function (higher order function)
 // We're passing incomming function fn to another function as a parameter
-// const asyncHandler = (fn) => { () => {} } // Below function is doing this.
+// const asyncHandler = (fn) => { return () => {} } // Below function is doing this.
 // In below code we extracted (req, res, next) from fn
 const asyncHandler = (fn) => async (req, res, next) => {
     try {
