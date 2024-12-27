@@ -189,11 +189,11 @@ const refreshAccessToken = asyncHandler( async(req, res) => {
             secure: true
         }
     
-        const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
     
         return res.status(200)
             .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
             .json(
                 new ApiResponse(
                     200, 
@@ -425,4 +425,4 @@ const getWatchedHistory = asyncHandler( async(req, res) => {
     return res.status(200).json(new ApiResponse(200, user[0].watchHistory, "Watched history fetched successfully!"))
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateUserAvatar, updateCoverImage, getUserChannelProfile, getWatchedHistory };
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateUserAvatar, updateCoverImage, updateAccountDetails , getUserChannelProfile, getWatchedHistory };

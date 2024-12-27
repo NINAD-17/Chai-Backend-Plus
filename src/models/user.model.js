@@ -49,7 +49,9 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
+// Encryption may take time so use async
 userSchema.pre("save", async function (next) {
+  // check if the password field is modified or not
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
