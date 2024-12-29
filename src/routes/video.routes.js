@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { publishAVideo, getVideoById, getAllVideos, deleteVideo, updateVideo, togglePublishStatus } from "../controllers/video.controller.js";
+import { publishAVideo, getVideoById, getAllVideos, deleteVideo, updateVideo, togglePublishStatus } from "../controllers/video.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
