@@ -8,6 +8,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const toggleSubscribtion = asyncHandler( async(req, res) => {
     const { channelId } = req.params;
 
+    if(channelId.toString() === req.user._id.toString()) {
+        throw new ApiError(400, "You cannot subscribe to your own channel!");
+    }
+
     // check if channel is valid
     const channel = await User.findById(channelId);
     if(!channel) {
@@ -20,6 +24,7 @@ const toggleSubscribtion = asyncHandler( async(req, res) => {
         subscriber: req.user._id
     })
 
+    let subscribeResult;
     if(!subscribedDocument) {
         const subscribe = await new Subscription({
             channel: channelId,
@@ -29,16 +34,19 @@ const toggleSubscribtion = asyncHandler( async(req, res) => {
         if(!subscribe) {
             throw new ApiError(500, "Subscription toggle failed. Please try again!");
         }
+
+        subscribeResult = "Subscribed!"
     } else {
         const unsubscribe = await Subscription.findByIdAndDelete(subscribedDocument._id);
         
         if(!unsubscribe) {
             throw new ApiError(500, "Subscription toggle failed. Please try again!");
         }
+        subscribeResult = "Unsubscribed!"
     }
 
     res.status(200).json(
-        new ApiResponse(200, null, "Subscription toggled successfully!")
+        new ApiResponse(200, null, `${subscribeResult} Subscription toggled successfully!`)
     )
 });
 
@@ -76,23 +84,32 @@ const getUserchannelSubscribers = asyncHandler( async(req, res) => {
                 $project: {
                     "subscriberDetails._id": 1,
                     "subscriberDetails.username": 1,
-                    "subscriberDetails.avatar": 1
+                    "subscriberDetails.avatar": 1,
                 }
             }
         ])
+
+        if (!allSubscribers.length) {
+          res
+            .status(200)
+            .json(
+              new ApiResponse(200, [], "No subscribers found for this channel!")
+            );
+        }
+
+        res
+          .status(200)
+          .json(
+            new ApiResponse(
+              200,
+              {allSubscribers, totalSubscribers: allSubscribers.length},
+              "Subscribers fetched successfully!"
+            )
+          );
+
     } catch (error) {
         throw new ApiError(500, "Failed to fetch subscribers. Please try again!");
     }
-
-    if(!allSubscribers.length) {
-        res.status(200).json(
-            new ApiResponse(200, [], "No subscribers found for this channel!")
-        )
-    }
-
-    res.status(200).json(
-        new ApiResponse(200, allSubscribers, "Subscribers fetched successfully!")
-    )
 })
 
 const getSubscribedChannels = asyncHandler( async(req, res) => {
@@ -146,28 +163,25 @@ const getSubscribedChannels = asyncHandler( async(req, res) => {
             {
                 $group: {
                     _id: null,
-                    channels: {
-                        $push: "$channelDetails",
-                        totalSubscribedChannels: {
-                            $sum: 1
-                        }
-                    }
+                    channels: { $push: "$channelDetails" },
+                    totalSubscribedChannels: { $sum: 1 }
                 }
             },
             {
                 $project: {
-                    channels: 1, // array of objects. object = channelDetails
+                    _id: 0,
+                    channels: 1,
                     totalSubscribedChannels: 1
                 }
             }
         ])
+
+        res.status(200).json(
+            new ApiResponse(200, allSubscribedChannels[0], "Subscribed channels fetched successfully!")
+        )
     } catch(error) {
         throw new ApiError(500, "Failed to fetch subscribed channels. Please try again!");
     }
-
-    res.status(200).json(
-        new ApiResponse(200, allSubscribedChannels[0], "Subscribed channels fetched successfully!")
-    )
 })
 
 export { toggleSubscribtion, getUserchannelSubscribers, getSubscribedChannels };
