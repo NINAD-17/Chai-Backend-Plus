@@ -32,12 +32,15 @@ const videoSchema = new Schema(
     },
     owner: {
         type: Schema.Types.ObjectId,
-        ref: "User"
+        ref: "User",
+        index: true // index on owner for faster searching of the video uploaded by specific user(owner)
     }
   },
   { timestamps: true }
 );
 
 videoSchema.plugin(mongooseAggregatePaginate)
+
+videoSchema.index({ title: "text", description: "text" }); // full-text index on title and description for text search // whenever you search for query then it'll search the query in both title and the description
 
 export const Video = mongoose.model("Video", videoSchema);

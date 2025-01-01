@@ -152,32 +152,43 @@ const getAllVideos = asyncHandler( async(req, res) => {
     const searchQuery = {};
 
     if(query) {
-        searchQuery.title = {
-            $regex: query,
-            $options: "i" // case insensitive
-        }
+        searchQuery.$text = { $search: query };
     }
 
     if(userId) {
         searchQuery.owner = userId;
     }
 
-    // fetch videos from the database
-    const videos = await Video.find(searchQuery)
-        .sort({ [sortBy]: sortType === "desc" ? -1: 1 }) // createdAt: -1
-        .skip(skip)
-        .limit(limitInt)
+    const sortCriteria = {};
+    if(query) {
+        sortCriteria.score = { $meta: "textScore"}
+    } else {
+        sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
+    }
 
-    // get total count of videos that match the query regardless of pagination
-    const totalVideos = await Video.countDocuments(searchQuery);
-
-    res.status(200).json(
-        new ApiResponse(200, {
-            videos,
-            totalVideos,
-            totalPages: Math.ceil(totalVideos / limitInt)
-        }, "Videos fetched successfully!")
-    )
+    try {
+        // fetch videos from the database
+        const videos = await Video.find(
+            searchQuery,
+            query? { score: { $meta: "textScore" }} : {}
+        )
+            .sort(sortCriteria) // createdAt: -1
+            .skip(skip)
+            .limit(limitInt)
+    
+        // get total count of videos that match the query regardless of pagination
+        const totalVideos = await Video.countDocuments(searchQuery);
+    
+        res.status(200).json(
+            new ApiResponse(200, {
+                videos,
+                totalVideos,
+                totalPages: Math.ceil(totalVideos / limitInt)
+            }, "Videos fetched successfully!")
+        )
+    } catch (error) {
+        throw new ApiError(500, "Failed to fetch videos");
+    }
 })
 
 // 2. infinite scrolling
@@ -189,14 +200,19 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
     let searchQuery = {};
 
     if(query) {
-        searchQuery.title = {
-            $regex: query,
-            $options: "i" // case insensitive
-        }
-    }
+        searchQuery.$title = { $search: query }
+    } 
 
     if(userId) {
         searchQuery.owner = userId; // mongoose takes care of converting string id into objectId but if you convert it explicitly then it's good. to do it use mongoose.Types.ObjectId(userId)
+    }
+
+    const sortCriteria = {};
+
+    if(query) {
+        sortCriteria.score = { $meta: "textScore" }
+    } else {
+        sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
     }
 
     // condition to fetch items after the last loaded item
@@ -204,13 +220,20 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
         searchQuery._id = { $gt: mongoose.Types.ObjectId(lastItemId) }
     }
 
-    const videos = await Video.find(searchQuery)
-        .sort({ [sortBy]: sortType === "desc" ? -1: 1})
-        .limit(limitInt)
-
-    res.status(200).json(
-        new ApiResponse(200, videos, "Videos fetched successfully!")
-    )
+   try {
+     const videos = await Video.find(
+         searchQuery,
+         query? { score: { $meta: "textScore" }} : {}
+     )
+         .sort(sortCriteria)
+         .limit(limitInt)
+ 
+     res.status(200).json(
+         new ApiResponse(200, videos, "Videos fetched successfully!")
+     )
+   } catch (error) {
+        throw new ApiError(500, "Videos fetch failed")
+   }
 })
 
 // update a video
