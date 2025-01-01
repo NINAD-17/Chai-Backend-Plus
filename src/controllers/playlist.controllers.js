@@ -45,14 +45,10 @@ const getUserPlaylists = asyncHandler( async(req, res) => {
 
     const matchWith = {};
     if(userId.toString() === req.user._id.toString()) {
-        matchWith = {
-            owner: new mongoose.Types.ObjectId(userId),
-        }
+        matchWith.owner = new mongoose.Types.ObjectId(userId);
     } else {
-        matchWith = {
-            owner: new mongoose.Types.ObjectId(userId),
-            isPublic: true  
-        }
+        matchWith.owner = new mongoose.Types.ObjectId(userId),
+        matchWith.isPublic = true  
     }
 
     try {
@@ -96,7 +92,7 @@ const getUserPlaylists = asyncHandler( async(req, res) => {
         }
 
         return res.status(200).json(
-            new ApiResponse(200, userPlaylists, "User playlists fetched successfully!")
+            new ApiResponse(200, {userPlaylists, totalPlaylists: userPlaylists.length}, "User playlists fetched successfully!")
         )
     } catch (error) {
         throw new ApiError(500, "Failed to fetch playlists!");
@@ -153,19 +149,20 @@ const getPlaylistById = asyncHandler( async(req, res) => {
                     isPublic: 1,
                     createdAt: 1,
                     updatedAt: 1,
-                    owner: {
+                    playlistOwner: {
                         _id: "$owner._id",
                         username: "$owner.username",
                         avatar: "$owner.avatar"
                     },
                     videos: {
-                        _id: "$videos._id",
-                        title: "$videos.title",
-                        description: "$videos.description",
-                        createdAt: "$videos.createdAt",
+                        _id: 1,
+                        title: 1,
+                        description: 1,
+                        createdAt: 1,
                         owner: {
-                            _id: "$videos.owner._id",
-                            username: "$videos.owner.username",
+                            _id: "$owner._id",
+                            username: "$owner.username",
+                            avatar: "$owner.avatar"
                         }
                     },
                     totalVideos: { $size: "$videos" }
