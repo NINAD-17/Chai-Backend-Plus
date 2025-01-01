@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import { Like } from "../models/like.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
@@ -30,11 +31,12 @@ const toggleVideoLike = asyncHandler( async(req, res) => {
 const toggleCommentLike = asyncHandler( async(req, res) => {
     const { commentId } = req.params;
 
-    const isCommentLikeDeleted = await findOneAndDelete({
-        comment: commentId,
-        likedBy: req.user._id
+    const isCommentLikeDeleted = await Like.findOneAndDelete({
+      comment: commentId,
+      likedBy: req.user._id,
     });
 
+    console.log({isCommentLikeDeleted})
     if(isCommentLikeDeleted) {
         return res.status(200).json(new ApiResponse(200, null, "Like removed successfully!"));
     } else {
@@ -52,10 +54,10 @@ const toggleCommentLike = asyncHandler( async(req, res) => {
 })
 
 const toggleTweetLike = asyncHandler( async(req, res) => {
-    const { tweetLike } = req.params;
+    const { tweetId } = req.params;
 
-    const isTweetLikeDeleted = await findOneAndDelete({
-        comment: commentId,
+    const isTweetLikeDeleted = await Like.findOneAndDelete({
+        tweet: tweetId,
         likedBy: req.user._id
     });
 
@@ -63,7 +65,7 @@ const toggleTweetLike = asyncHandler( async(req, res) => {
         return res.status(200).json(new ApiResponse(200, null, "Like removed successfully!"));
     } else {
         const newLike = await Like.create({
-            comment: commentId,
+            tweet: tweetId,
             likedBy: req.user._id
         });
 
@@ -104,10 +106,8 @@ const getLikedVideos = asyncHandler( async(req, res) => {
                             videoFile: 1,
                             thumbnail: 1,
                             title: 1,
-                            description: 1,
                             duration: 1,
                             views: 1,
-                            "owner.username": 1
                         }
                     }
                 ]
@@ -115,6 +115,14 @@ const getLikedVideos = asyncHandler( async(req, res) => {
         },
         {
             $unwind: "$videoDetails"
+        },
+        {
+            $project: {
+                _id: 1,
+                likedBy: 1,
+                createdAt: 1,
+                videoDetails: 1
+            }
         }
     ])
 
