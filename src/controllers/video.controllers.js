@@ -1,6 +1,7 @@
-import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js"
-import Video from "../models/video.model.js";
+import { Video } from "../models/video.model.js";
+import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
@@ -9,11 +10,11 @@ const publishAVideo = asyncHandler( async(req, res) => {
     // get data of video from body
     const { title, description } = req.body;
 
-    if(!title.trim()) {
+    if(!title?.trim()) {
         throw new ApiError(400, "Title is required");
     }
 
-    if(!description.trim()) {
+    if(!description?.trim()) {
         description = description.trim(); // if description is empty (but only whitespaces are there) then remove those whitespaces to get falsy values. We're not throwing error as description is optional field
     }
 
@@ -38,7 +39,7 @@ const publishAVideo = asyncHandler( async(req, res) => {
     }
 
     // save video data in database
-    const newVideo = await User.create({
+    const newVideo = await Video.create({
         videoFile: video.url,
         thumbnail: thumbnailUrl,
         title,
@@ -51,19 +52,9 @@ const publishAVideo = asyncHandler( async(req, res) => {
         throw new ApiError(500, "Video not uploaded. Please try again!");
     }
 
-    const responseVideo = {
-        videoFile: newVideo.videoFile,
-        thumbnail: newVideo.thumbnail,
-        title: newVideo.title,
-        description: newVideo.description,
-        duration: newVideo.duration,
-        owner: newVideo.owner,
-        isPublished: newVideo.isPublished,
-    }
-
     // send the response
     return res.status(201).json(
-        new ApiResponse(201, responseVideo, "Video published successfully!")
+        new ApiResponse(201, newVideo, "Video published successfully!")
     )
 })
 
@@ -108,7 +99,7 @@ const getVideoById = asyncHandler( async(req, res) => {
                     $size: "$owner.subscribers"
                 },
                 "owner.isUserSubscribed": {
-                    $in: [req.user._id, $owner.subscribers.subscriber]
+                    $in: [new mongoose.Types.ObjectId(req.user._id), "$owner.subscribers.subscriber"]
                 }
             }
         },
@@ -227,9 +218,14 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
      )
          .sort(sortCriteria)
          .limit(limitInt)
+
+     const totalVideos = await Video.countDocuments(searchQuery);
  
      res.status(200).json(
-         new ApiResponse(200, videos, "Videos fetched successfully!")
+         new ApiResponse(200, {
+            videos,
+            totalVideos,
+         }, "Videos fetched successfully!")
      )
    } catch (error) {
         throw new ApiError(500, "Videos fetch failed")
@@ -238,15 +234,16 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
 
 // update a video
 const updateVideo = asyncHandler( async(req, res) => {
+    const { videoId } = req.params;
     const { title, description } = req.body;
     
     let updateFields = {};
 
-    if(title && title.trim()) {
+    if(title && title?.trim()) {
         updateFields.title = title.trim();
     }
 
-    if(description && description.trim()) {
+    if(description && description?.trim()) {
         updateFields.description = description.trim();
     }
 
@@ -254,12 +251,12 @@ const updateVideo = asyncHandler( async(req, res) => {
 
     let thumbnailUrl;
     if(thumbnailLocalPath) {
-        thumbnailUrl = await uploadOnCloudinary(thumbnailLocalPath);
-        updateFields.thumbnail = thumbnailUrl;
+        const thumbnailResponse = await uploadOnCloudinary(thumbnailLocalPath);
+        updateFields.thumbnail = thumbnailResponse.url;
     }
 
     const video = await Video.findByIdAndUpdate(
-        req.user._id,
+        videoId,
         {
             $set: updateFields
         },
@@ -319,12 +316,12 @@ const togglePublishStatus = asyncHandler( async(req, res) => {
         }
     )
 
-    if(!updateVideo) {
+    if(!updatedVideo) {
         throw new ApiError(500, "Video not updated. Please try again!");
     }
 
     res.status(200).json(
-        new ApiResponse(200, updateVideo, "Video updated successfully!")
+        new ApiResponse(200, updateVideo, `Now your video is ${updatedVideo.isPublished ? "Public. Means anyone can view it.": "Private. Means only you can view it."}. Video updated successfully!`)
     )
 })
 
