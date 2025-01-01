@@ -28,6 +28,8 @@ const getChannelStats = asyncHandler( async (req, res) => {
         const totalViews = videos[0].totalViews;
         const totalVideos = videos[0].totalVideos;
 
+        console.log(totalViews, totalVideos);
+
         const subscribers = await Subscription.aggregate([
             {
                 $match: {
@@ -42,7 +44,8 @@ const getChannelStats = asyncHandler( async (req, res) => {
             }
         ])
 
-        const totalSubscribers = subscribers[0].totalSubscribers;
+        const totalSubscribers = subscribers.length? subscribers[0].totalSubscribers: 0;
+        console.log({totalSubscribers})
 
         const [videoLikes, commentLikes, tweetLikes] = await Promise.all([
           Like.aggregate([
@@ -110,9 +113,9 @@ const getChannelStats = asyncHandler( async (req, res) => {
           ])
         ]);
 
-        const totalVideoLikes = videoLikes[0].totalVideoLikes || 0;
-        const totalCommentLikes = commentLikes[0].totalCommentLikes || 0;
-        const totalTweetLikes = tweetLikes[0].totalTweetLikes || 0;
+        const totalVideoLikes = videoLikes.length? videoLikes[0].totalVideoLikes : 0;
+        const totalCommentLikes = commentLikes.length? commentLikes[0].totalCommentLikes : 0;
+        const totalTweetLikes = tweetLikes.length? tweetLikes[0].totalTweetLikes : 0;
 
         const totalLikes = totalVideoLikes + totalCommentLikes + totalTweetLikes;
 
