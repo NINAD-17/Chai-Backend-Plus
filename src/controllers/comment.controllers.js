@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Comment } from "../models/comment.model.js";
+import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -46,7 +47,7 @@ const getVideoComments = asyncHandler( async(req, res) => {
             {
                 $unwind: {
                     path: "$likes",
-                    preserveNullAndEmptyArrays = true // Ensures comments with zero likes are also included
+                    preserveNullAndEmptyArrays: true // Ensures comments with zero likes are also included
                 }
             },
             {
@@ -83,7 +84,7 @@ const getVideoComments = asyncHandler( async(req, res) => {
         }
 
         res.status(200).json(
-            new ApiResponse(200, comments, "Comments fetched successfully!");
+            new ApiResponse(200, comments, "Comments fetched successfully!")
         )
     } catch (error) {
         throw new ApiError(500, "Failed to fetch comments. Please try again!");
