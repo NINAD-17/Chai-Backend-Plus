@@ -184,7 +184,8 @@ const getAllVideos = asyncHandler( async(req, res) => {
 
 // 2. infinite scrolling
 const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
-    const { lastItemId, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
+    const { lastItemId = "", fetchCount = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
+    console.log({lastItemId}, typeof lastItemId);
 
     const limitInt = parseInt(limit, 10);
 
@@ -206,9 +207,13 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
         sortCriteria[sortBy] = sortType === "desc" ? -1 : 1;
     }
 
+    if(lastItemId && !mongoose.Types.ObjectId.isValid(lastItemId)) {
+        throw new ApiError(400, "Invalid lastItemId");
+    }
+
     // condition to fetch items after the last loaded item
-    if(lastItemId) {
-        searchQuery._id = { $gt: mongoose.Types.ObjectId(lastItemId) }
+    if (lastItemId && lastItemId !== "" && mongoose.Types.ObjectId.isValid(lastItemId)) {
+      searchQuery._id = { $gt: new mongoose.Types.ObjectId(lastItemId) };
     }
 
    try {
@@ -224,7 +229,7 @@ const getAllVideosInfiniteScroll = asyncHandler( async(req, res) => {
      res.status(200).json(
          new ApiResponse(200, {
             videos,
-            totalVideos,
+            totalVideosFound: totalVideos,
          }, "Videos fetched successfully!")
      )
    } catch (error) {
